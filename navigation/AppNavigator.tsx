@@ -1,20 +1,17 @@
-// navigation/AppNavigator.tsx
-import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import React from "react";
-import HomeScreen from "../screens/HomeScreen";
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import React from 'react';
+import HomeScreen from '../screens/HomeScreen';
+import LoginScreen from '../screens/LoginScreen';
+import RegisterScreen from '../screens/RegisterScreen';
 
-export type AppStackParamList = {
-  Home: undefined;
-};
+const Stack = createNativeStackNavigator();
 
-const Stack = createNativeStackNavigator<AppStackParamList>();
-
-const AppNavigator = () => {
+export default function AppNavigator() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator initialRouteName="Login">
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
       <Stack.Screen name="Home" component={HomeScreen} />
     </Stack.Navigator>
   );
-};
-
-export default AppNavigator;
+}
