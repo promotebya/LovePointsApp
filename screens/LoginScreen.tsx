@@ -3,14 +3,18 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { doc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import { auth } from '../firebase/firebaseConfig';
 
+
 type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  Home: undefined;
 };
+
 
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
@@ -19,16 +23,33 @@ const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleLogin = async () => {
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log('✅ Login successful');
-      // 🔥 NO manual navigation to Home
-    } catch (error: any) {
-      console.error('❌ Login error:', error.message);
-      Alert.alert('Login Failed', error.message);
-    }
-  };
+ const handleLogin = async () => {
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    console.log('✅ Login successful:', user.email);
+
+    // 🔥 Firestore: save or update user info
+    const db = getFirestore();
+    const userDocRef = doc(db, 'users', user.uid);
+
+    await setDoc(userDocRef, {
+      email: user.email,
+      createdAt: serverTimestamp(),
+    }, { merge: true });
+
+    console.log('📝 User document saved to Firestore');
+
+    // ✅ Navigate to Home screen
+    navigation.replace('Home');
+
+  } catch (error: any) {
+    console.error('❌ Login error:', error.message);
+    Alert.alert('Login Failed', error.message);
+  }
+};
+
 
   return (
     <View style={styles.container}>
