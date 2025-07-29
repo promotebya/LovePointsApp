@@ -1,5 +1,5 @@
-import { onAuthStateChanged, User } from "firebase/auth";
-import { useEffect, useState } from "react";
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { useEffect, useState } from 'react';
 import { auth } from '../firebase/firebaseConfig';
 
 export const useAuthListener = () => {
@@ -7,8 +7,8 @@ export const useAuthListener = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser);
       setLoading(false);
     });
 
@@ -17,4 +17,3 @@ export const useAuthListener = () => {
 
   return { user, loading };
 };
-
