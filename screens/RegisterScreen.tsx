@@ -3,9 +3,9 @@
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   Button,
   StyleSheet,
@@ -19,35 +19,45 @@ import { auth } from '../firebase/firebaseConfig';
 type RootStackParamList = {
   Login: undefined;
   Register: undefined;
+  Home: undefined;
 };
 
-type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Register'>;
+type RegisterScreenNavigationProp = NativeStackNavigationProp<
+  RootStackParamList,
+  'Register'
+>;
 
 const RegisterScreen = () => {
+  const navigation = useNavigation<RegisterScreenNavigationProp>();
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
-  const navigation = useNavigation<RegisterScreenNavigationProp>();
 
   const handleRegister = async () => {
-    if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+    if (!name || !email || !password) {
+      Alert.alert('Missing Fields', 'Please fill out all fields.');
       return;
     }
 
-    setIsLoading(true);
-
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      console.log('✅ User registered');
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      const db = getFirestore();
+      const userDocRef = doc(db, 'users', user.uid);
+
+      await setDoc(userDocRef, {
+        name,
+        email,
+        createdAt: serverTimestamp(),
+        avatarUrl: 'https://i.imgur.com/4ZQZ4Z4.png', // Placeholder avatar
+      });
+
+      console.log('✅ User registered & saved to Firestore');
       Alert.alert('Success', 'Account created!');
-      // No manual navigation — handled by useAuthListener
     } catch (error: any) {
       console.error('❌ Registration error:', error.message);
       Alert.alert('Registration Failed', error.message);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -57,13 +67,18 @@ const RegisterScreen = () => {
 
       <TextInput
         style={styles.input}
+        placeholder="Your name"
+        value={name}
+        onChangeText={setName}
+      />
+      <TextInput
+        style={styles.input}
         placeholder="Email"
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
         onChangeText={setEmail}
       />
-
       <TextInput
         style={styles.input}
         placeholder="Password"
@@ -73,11 +88,7 @@ const RegisterScreen = () => {
         onChangeText={setPassword}
       />
 
-      {isLoading ? (
-        <ActivityIndicator size="large" color="#000" />
-      ) : (
-        <Button title="Register" onPress={handleRegister} disabled={isLoading} />
-      )}
+      <Button title="Register" onPress={handleRegister} />
 
       <TouchableOpacity onPress={() => navigation.goBack()}>
         <Text style={styles.link}>Already have an account? Login here</Text>
