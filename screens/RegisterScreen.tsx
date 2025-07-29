@@ -4,7 +4,16 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import React, { useState } from 'react';
-import { Alert, Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Button,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { auth } from '../firebase/firebaseConfig';
 
 type RootStackParamList = {
@@ -17,17 +26,28 @@ type RegisterScreenNavigationProp = NativeStackNavigationProp<RootStackParamList
 const RegisterScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
   const navigation = useNavigation<RegisterScreenNavigationProp>();
 
   const handleRegister = async () => {
+    if (!email || !password) {
+      Alert.alert('Error', 'Please enter both email and password');
+      return;
+    }
+
+    setIsLoading(true);
+
     try {
       await createUserWithEmailAndPassword(auth, email, password);
       console.log('✅ User registered');
-      // 🔥 NO manual navigation to Home
       Alert.alert('Success', 'Account created!');
+      // No manual navigation — handled by useAuthListener
     } catch (error: any) {
       console.error('❌ Registration error:', error.message);
       Alert.alert('Registration Failed', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -53,11 +73,15 @@ const RegisterScreen = () => {
         onChangeText={setPassword}
       />
 
-      <Button title="Register" onPress={handleRegister} />
+      {isLoading ? (
+        <ActivityIndicator size="large" color="#000" />
+      ) : (
+        <Button title="Register" onPress={handleRegister} disabled={isLoading} />
+      )}
 
       <TouchableOpacity onPress={() => navigation.goBack()}>
-  <Text style={styles.link}>Already have an account? Login here</Text>
-</TouchableOpacity>
+        <Text style={styles.link}>Already have an account? Login here</Text>
+      </TouchableOpacity>
     </View>
   );
 };

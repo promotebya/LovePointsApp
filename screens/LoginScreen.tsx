@@ -5,9 +5,17 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
-import { Alert, Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Button,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { auth } from '../firebase/firebaseConfig';
-
 
 type RootStackParamList = {
   Login: undefined;
@@ -15,41 +23,50 @@ type RootStackParamList = {
   Home: undefined;
 };
 
-
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
 
 const LoginScreen = () => {
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
- const handleLogin = async () => {
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Missing Fields', 'Please enter both email and password.');
+      return;
+    }
 
-    console.log('✅ Login successful:', user.email);
+    setIsLoading(true);
 
-    // 🔥 Firestore: save or update user info
-    const db = getFirestore();
-    const userDocRef = doc(db, 'users', user.uid);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
 
-    await setDoc(userDocRef, {
-      email: user.email,
-      createdAt: serverTimestamp(),
-    }, { merge: true });
+      console.log('✅ Login successful:', user.email);
 
-    console.log('📝 User document saved to Firestore');
+      // Firestore: Save or update user info
+      const db = getFirestore();
+      const userDocRef = doc(db, 'users', user.uid);
 
-    // ✅ Navigate to Home screen
-    navigation.replace('Home');
+      await setDoc(
+        userDocRef,
+        {
+          email: user.email,
+          lastLogin: serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-  } catch (error: any) {
-    console.error('❌ Login error:', error.message);
-    Alert.alert('Login Failed', error.message);
-  }
-};
-
+      console.log('📝 User document updated in Firestore');
+      // Navigation is handled via useAuthListener after login
+    } catch (error: any) {
+      console.error('❌ Login error:', error.message);
+      Alert.alert('Login Failed', error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -73,14 +90,15 @@ const LoginScreen = () => {
         onChangeText={setPassword}
       />
 
-      <Button title="Login" onPress={handleLogin} />
+      {isLoading ? (
+        <ActivityIndicator size="large" color="#000" />
+      ) : (
+        <Button title="Login" onPress={handleLogin} disabled={isLoading} />
+      )}
 
-      <Text
-        style={styles.registerLink}
-        onPress={() => navigation.navigate('Register')}
-      >
-        Don't have an account? Register here
-      </Text>
+      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+        <Text style={styles.link}>Don't have an account? Register here</Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -107,7 +125,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 16,
   },
-  registerLink: {
+  link: {
     marginTop: 16,
     color: 'blue',
     textAlign: 'center',

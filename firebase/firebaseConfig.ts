@@ -1,5 +1,5 @@
-import { initializeApp } from 'firebase/app';
-import { browserLocalPersistence, getAuth, setPersistence } from 'firebase/auth';
+import { initializeApp } from "firebase/app";
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyA9GMS43chgVSHXCH7i0A8FgACapq7uC38",
@@ -13,9 +13,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-
-// ✅ Make auth persist between sessions
-setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 export { auth };
 
