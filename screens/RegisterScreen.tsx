@@ -1,63 +1,53 @@
 // screens/RegisterScreen.tsx
-
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import React, { useState } from 'react';
-import {
-  Alert,
-  Button,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, Button, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { auth } from '../firebase/firebaseConfig';
+import type { AuthStackParamList } from '../navigation/AuthNavigator';
 
-type RootStackParamList = {
-  Login: undefined;
-  Register: undefined;
-  Home: undefined;
-};
+type Nav = NativeStackNavigationProp<AuthStackParamList, 'Register'>;
 
-type RegisterScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Register'
->;
-
-const RegisterScreen = () => {
-  const navigation = useNavigation<RegisterScreenNavigationProp>();
+export default function RegisterScreen() {
+  const navigation = useNavigation<Nav>();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleRegister = async () => {
-    if (!name || !email || !password) {
-      Alert.alert('Missing Fields', 'Please fill out all fields.');
+    if (!email || !password || !name.trim()) {
+      Alert.alert('Missing fields', 'Please enter name, email and password.');
       return;
     }
-
+    setSubmitting(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      const user = cred.user;
 
+      // Create initial user doc with name
       const db = getFirestore();
-      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(
+        doc(db, 'users', user.uid),
+        {
+          email: user.email ?? email.trim(),
+          name: name.trim(),
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp(),
+        },
+        { merge: true }
+      );
 
-      await setDoc(userDocRef, {
-        name,
-        email,
-        createdAt: serverTimestamp(),
-        avatarUrl: 'https://i.imgur.com/4ZQZ4Z4.png', // Placeholder avatar
-      });
-
-      console.log('✅ User registered & saved to Firestore');
+      console.log('User registered:', user.email);
+      // Navigation handled by auth listener
       Alert.alert('Success', 'Account created!');
-    } catch (error: any) {
-      console.error('❌ Registration error:', error.message);
-      Alert.alert('Registration Failed', error.message);
+    } catch (e: any) {
+      console.error('Registration error:', e?.message);
+      Alert.alert('Registration failed', e?.message ?? 'Unknown error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -68,9 +58,11 @@ const RegisterScreen = () => {
       <TextInput
         style={styles.input}
         placeholder="Your name"
+        autoCapitalize="words"
         value={name}
         onChangeText={setName}
       />
+
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -79,49 +71,28 @@ const RegisterScreen = () => {
         value={email}
         onChangeText={setEmail}
       />
+
       <TextInput
         style={styles.input}
         placeholder="Password"
-        secureTextEntry
         autoCapitalize="none"
+        secureTextEntry
         value={password}
         onChangeText={setPassword}
       />
 
-      <Button title="Register" onPress={handleRegister} />
+      <Button title={submitting ? 'Please wait…' : 'Create account'} onPress={handleRegister} disabled={submitting} />
 
-      <TouchableOpacity onPress={() => navigation.goBack()}>
+      <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.link}>Already have an account? Login here</Text>
       </TouchableOpacity>
     </View>
   );
-};
-
-export default RegisterScreen;
+}
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    alignSelf: 'center',
-    marginBottom: 32,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  link: {
-    marginTop: 16,
-    color: 'blue',
-    textAlign: 'center',
-  },
+  container: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#fff' },
+  title: { fontSize: 32, fontWeight: 'bold', alignSelf: 'center', marginBottom: 32 },
+  input: { borderWidth: 1, borderColor: '#ccc', padding: 14, borderRadius: 8, marginBottom: 16 },
+  link: { marginTop: 16, color: 'blue', textAlign: 'center' },
 });

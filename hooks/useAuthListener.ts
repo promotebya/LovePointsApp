@@ -1,3 +1,4 @@
+// hooks/useAuthListener.ts
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { useEffect, useState } from 'react';
 import { auth } from '../firebase/firebaseConfig';
@@ -7,13 +8,12 @@ export default function useAuthListener() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-      console.log('👤 Auth state changed:', firebaseUser);
-      setUser(firebaseUser ?? null);
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u ?? null);
       setLoading(false);
+      console.log('Auth state user:', u?.email ?? null);
     });
-
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
   return { user, loading };

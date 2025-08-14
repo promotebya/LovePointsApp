@@ -9,12 +9,9 @@ import AuthNavigator from './navigation/AuthNavigator';
 export default function App() {
   const { user, loading } = useAuthListener();
 
-  // ✅ Debugging line
-  console.log('👤 Auth state user:', user);
-
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" />
       </View>
     );
